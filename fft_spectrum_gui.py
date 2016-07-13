@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: cp1252 -*-
-# Program fft_spectrum_gui.py   ¡¡ OK !!
-# - Based on program frame_tab_plot_06.py
+# Program fft_spectrum_gui.py   Â¡Â¡ OK !!
+# - Based on program frame_tab_plot_07.py
 # - Sample acceleration data from a ADXL335 accelerometer.
 # - Plot sampled data and its FFT spectrum.
 # - Save data on file and open files with saved data.
 # - Serial communication with microcontroller.
 # - Serial port selection.
-# 24/06/2016
+# - RadioButtons to select a Window function to apply.
+# 13/07/2016
 
 import matplotlib
 matplotlib.use('TkAgg')
@@ -17,7 +18,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 from matplotlib.backend_bases import key_press_handler
 from matplotlib.figure import Figure
 
-from scipy import fftpack, arange
+from scipy import fftpack, arange, signal
 import numpy as np
 
 import sys
@@ -108,12 +109,11 @@ def grabar(canal_1, canal_2, archivo):
 
     
 class Application:
-    
+
 
     def __init__(self, parent):
         self.parent = parent
         self.frames()
-
         self.f_saved = True       #Sampled data saved
         root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
@@ -133,11 +133,9 @@ class Application:
         note = ttk.Notebook(frame2)
         self.tab1 = ttk.Frame(note)
         self.tab2 = ttk.Frame(note)
-        #tab3 = ttk.Frame(note)
 
         note.add(self.tab1, text = "Frquency")
         note.add(self.tab2, text = "Time")
-        #note.add(tab3, text = "Tab Three")
 
         # Positioning
         frame1.pack(side='left', fill='both', padx=5, pady=5)
@@ -157,6 +155,14 @@ class Application:
 
         self.text_message = ScrolledText(frame1, height=10, width=20)
 
+        self.window_var = Tk.IntVar()
+        self.window_var.set(1)        #Option rectangular window 
+        radio_button1 = Tk.Radiobutton(frame1, text="Rectangular Window",
+                                       variable=self.window_var, value=1, command=self.win_sel)
+        radio_button2 = Tk.Radiobutton(frame1, text="Hann Window",
+                                       variable=self.window_var, value=2, command=self.win_sel)
+        radio_button3 = Tk.Radiobutton(frame1, text="Flattop Window",
+                                       variable=self.window_var, value=3, command=self.win_sel)
         # Grid
         boton_open.grid(row=1, column=0, padx=5, pady=5)
         boton_save.grid(row=2, column=0, padx=5, pady=5)
@@ -165,6 +171,9 @@ class Application:
         self.sel_puerto.grid(row=5, column=0, padx=5, pady=5)
         boton_read.grid(row=6, column=0, padx=5, pady=5)
         self.text_message.grid(row=7, column=0, padx=5, pady=5)
+        radio_button1.grid(row=8, column=0, sticky="W")
+        radio_button2.grid(row=9, column=0, sticky="W")
+        radio_button3.grid(row=10, column=0, sticky="W")
 
         #note.grid(row = 0, column=0)
         note.pack(side='top', fill='both', padx=5, pady=5)
@@ -241,8 +250,8 @@ class Application:
                 estado_serial = True
             else:
                 estado_serial = False
-        except serial.SerialException as ex:
-            #print "Can´t open serial port: " + str(ex)
+        except (serial.SerialException, ValueError) as ex:
+            #print "CanÂ´t open serial port: " + str(ex)
             tkMessageBox.showerror( "Result", "Can't open serial port: " + str(ex))
 
         if (estado_serial == True):
@@ -304,7 +313,7 @@ class Application:
                         conta_datos_rx += 1 ;
                         #print("conta_datos_rx =  %s" %conta_datos_rx)
 
-                #time.sleep(0.001)   #Sin esta línea, el programa consume 90% de recursos CPU    
+                #time.sleep(0.001)   #Sin esta lÃ­nea, el programa consume 90% de recursos CPU    
                 #Cuando la velocidad del puerto serial es alta y se recibe una gran cantidad 
                 #de datos, time.sleep() impone un tiempo demasiado largo.
 
@@ -331,7 +340,8 @@ class Application:
 
             self.f_saved = False                #Sampled data not saved
 
-            self.plot(self.tab1, self.tab2, canal_1, canal_2)
+            self.window_var.set(1)        #Option rectangular window
+            self.plot(self.tab1, self.tab2, canal_1, canal_2, win_var=1)
 
 
     def show_message(self, text_message, message_string):
@@ -351,16 +361,8 @@ class Application:
             self.sel_puerto.current(0)
 
 
-##    def etiquetas(self, tab1, tab2):
-##        etiqueta1 = Tk.Label(tab1, text="Frquency")
-##        etiqueta2 = Tk.Label(tab2, text="Time")
-##
-##        etiqueta1.grid(row=1, column=0)
-##        etiqueta2.grid(row=1, column=0)
 
-
-    def plot(self, tab1, tab2, canal_1, canal_2):
-        """Plots sampled data and its FFT spectrum, X and Y axis"""
+    def plot(self, tab1, tab2, canal_1, canal_2, win_var=1):
         num_datos = len(canal_1)
         X = range(0, num_datos, 1)
 
@@ -386,7 +388,7 @@ class Application:
 
         #----------------- Plotting ----------
         X1 = np.linspace(0, num_datos/5, num=num_datos)     # X axis, 5000 sps, 1/5 ms.
-        
+
         # Figure 1. Sampled signals.
         #Channel X
         ax_11, ax_12 = self.canvas2.figure.get_axes()
@@ -409,10 +411,19 @@ class Application:
         canal_fft = []
         canal_fft = canal_1
 
-        N = len(canal_fft)           # length of the signal
+        N = len(canal_fft)         # length of the signal
+
+        #Window function
+        if(win_var == 2):
+            w = signal.hann(N, sym=False)      #Hann (Hanning) window
+        elif(win_var == 3):
+            w = signal.flattop(N, sym=False)   #Flattop window
+        else:
+            w = 1                              #Rectangular window
+        
         T = 1.0 / sample_rate
         y = canal_fft
-        yf = fftpack.fft(y)
+        yf = fftpack.fft(y*w)
         xf = np.linspace(0.0, 1.0/(2.0*T), N/2)
 
         ax_21, ax_22 = self.canvas1.figure.get_axes()
@@ -427,10 +438,10 @@ class Application:
         canal_fft = []
         canal_fft = canal_2
 
-        N = len(canal_fft)           # length of the signal
+        N = len(canal_fft)              # length of the signal
         T = 1.0 / sample_rate
         y = canal_fft
-        yf = fftpack.fft(y)
+        yf = fftpack.fft(y*w)
         xf = np.linspace(0.0, 1.0/(2.0*T), N/2)
 
         ax_22.clear()
@@ -445,7 +456,19 @@ class Application:
         self.canvas2.draw()
 
 
+    def win_sel(self):
+        """Window selection. Every time a window is selected,
+        the FFT spectrum is calculated, applying the selected window function"""
+        global g_canal_1, g_canal_2
+        canal_1 = g_canal_1[:]            #Copy list by value not by reference
+        canal_2 = g_canal_2[:]            
+        win_var = self.window_var.get()
+        if(len(canal_1) != 0):            #Apply only if data available
+            self.plot(self.tab1, self.tab2, canal_1, canal_2, win_var)
+
+
     def open_file(self):
+        """Opens dialog to select a file, reads data from file and plots the data"""
         ftypes = [('Text files', '*.txt'), ('All files', '*')]
         dlg = tkFileDialog.Open(root, filetypes = ftypes)
         fl = dlg.show()
@@ -468,7 +491,8 @@ class Application:
             g_canal_1 = canal_1[:]            #Copy list by value not by reference
             g_canal_2 = canal_2[:]
 
-            self.plot(self.tab1, self.tab2, canal_1, canal_2)
+            self.window_var.set(1)        #Option rectangular window
+            self.plot(self.tab1, self.tab2, canal_1, canal_2, win_var=1)
 
 
     def save_file(self):
