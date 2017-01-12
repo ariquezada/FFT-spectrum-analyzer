@@ -1,5 +1,7 @@
 #!/usr/bin/env python3    ¡¡¡ OK !!!
-# Programa fft_spectrum_gui_3can_py3_01.py
+# Program fft_spectrum_gui_3can_py3_01.py
+# - Added a timeout control to a while loop.
+# 12/01/2017
 # Program fft_spectrum_gui_3can.py modified:
 # - From Python 2.7 to Python 3.5.
 # - Works with AVR program adxl335_3can_01.c
@@ -53,6 +55,8 @@ max_freq_z = 500         # Maximum signal frequency, Z axis (accelerometer).
 g_canal_1 = []           #Global canal_1
 g_canal_2 = []           #Global canal_2
 g_canal_3 = []           #Global canal_3
+
+t_timeout = 8            #Timeout time in seconds.
 
 
 def scan_serial():
@@ -303,7 +307,10 @@ class Application:
             #serial_avr.write(chr(0x22))    #CRC 'INI'. Not used.
             serial_avr.write(b"\x7E")     #End of packet.
 
-            while conta_datos_rx < datos_a_leer:
+            global t_timeout
+            timeout_state = False
+            t0 = time.time()       #Start loop time stamp.
+            while ((conta_datos_rx < datos_a_leer) and (timeout_state == False)):
                 if serial_avr.inWaiting():
                     lectura = serial_avr.read(serial_avr.inWaiting())
                     buffer += lectura
@@ -346,38 +353,47 @@ class Application:
                         conta_datos_rx += 1 ;
                         #print("conta_datos_rx =  %s" %conta_datos_rx)
 
-                #time.sleep(0.001)   #Sin esta línea, el programa consume 90% de recursos CPU    
-                #Cuando la velocidad del puerto serial es alta y se recibe una gran cantidad 
-                #de datos, time.sleep() impone un tiempo demasiado largo.
+                #Check if t_timeout seconds have elapsed since time stamp t0
+                if ((time.time() - t0) > t_timeout):
+                    timeout_state = True
+                    #print("Serial port timeout")
 
-            print("Sending PAR")
-            self.text_message.config(state=Tk.NORMAL)        #Enable to modify
-            self.text_message.insert(Tk.END, "Sending PAR \n")
-            self.text_message.config(state=Tk.DISABLED)      #Disable - Read only
-            root.update_idletasks()        #Needed to make message visible
+            if (timeout_state == False):
+                print("Sending PAR")
+                self.text_message.config(state=Tk.NORMAL)        #Enable to modify
+                self.text_message.insert(Tk.END, "Sending PAR \n")
+                self.text_message.config(state=Tk.DISABLED)      #Disable - Read only
+                root.update_idletasks()        #Needed to make message visible
             
-            serial_avr.write(b'PAR')          #Stop data sampling.
-            serial_avr.write(b"\x7E")      #End of packet.
+                serial_avr.write(b'PAR')          #Stop data sampling.
+                serial_avr.write(b"\x7E")         #End of packet.
 
-            serial_avr.close()      #Close serial port.
+                serial_avr.close()                #Close serial port.
 
-            print("Amount of samples channel 1: %s" %len(canal_1))
-            print("Amount of samples channel 2: %s" %len(canal_2))
-            print("Amount of samples channel 3: %s" %len(canal_3))
-            message_string = "Amount of samples channel 1: {0} \n".format(len(canal_1))
-            message_string += "Amount of samples channel 2: {0} \n".format(len(canal_2))
-            message_string += "Amount of samples channel 3: {0} \n".format(len(canal_3))
-            self.show_message(self.text_message, message_string)
+                print("Amount of samples channel 1: %s" %len(canal_1))
+                print("Amount of samples channel 2: %s" %len(canal_2))
+                print("Amount of samples channel 3: %s" %len(canal_3))
+                message_string = "Amount of samples channel 1: {0} \n".format(len(canal_1))
+                message_string += "Amount of samples channel 2: {0} \n".format(len(canal_2))
+                message_string += "Amount of samples channel 3: {0} \n".format(len(canal_3))
+                self.show_message(self.text_message, message_string)
             
-            #Keep a copy of the original values
-            g_canal_1 = canal_1[:]            #Copy list by value not by reference
-            g_canal_2 = canal_2[:]
-            g_canal_3 = canal_3[:]
+                #Keep a copy of the original values
+                g_canal_1 = canal_1[:]            #Copy list by value not by reference
+                g_canal_2 = canal_2[:]
+                g_canal_3 = canal_3[:]
 
-            self.f_saved = False                #Sampled data not saved
+                self.f_saved = False                #Sampled data not saved
 
-            self.window_var.set(1)        #Option rectangular window
-            self.plot(self.tab1, self.tab2, canal_1, canal_2, canal_3, win_var=1)
+                self.window_var.set(1)        #Option rectangular window
+                self.plot(self.tab1, self.tab2, canal_1, canal_2, canal_3, win_var=1)
+            else:
+                serial_avr.write(b'PAR')          #Stop data sampling.
+                serial_avr.write(b"\x7E")         #End of packet.
+                serial_avr.close()                #Close serial port.
+                print("Serial port timeout")
+                message_string = ("Serial port timeout \n")
+                self.show_message(self.text_message, message_string)
 
 
     def show_message(self, text_message, message_string):
