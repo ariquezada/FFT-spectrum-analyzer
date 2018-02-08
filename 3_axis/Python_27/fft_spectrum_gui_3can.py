@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: cp1252 -*-
 # Program fft_spectrum_gui_3can.py   ¡¡¡ OK !!!
+# - Corrected g_scale.
+# - g_scale = (Vref / ADC resolution) * (300 mv/g)
+# - Error noted and corrected by Steve Ferry.
+# 08/02/2018
 # Program fft_spectrum_gui.py modificado:
 # - 3 canales de datos (3 ejes)
 # - Trabaja con programa adxl335_3can_01.c en atmega328
@@ -44,7 +48,9 @@ import time
 
 datos_a_leer = 16384     # Amount of samples to read.
 sample_rate = 5000       # Sampling frequency (SPS).
-g_scale = 3.0/512        # +- 3g. 10 bit ADC.
+#g_scale = 3.0/512        # +- 3g. 10 bit ADC. Wrong value.
+g_scale = (3.3 / 1024) * (1000/300)  #Right value. Thanks Steve.
+#g_scale = (Vref / ADC resolution) * 1/(300 mv/g)
 max_freq = 1500          # Maximum signal frequency, X and Y axis (accelerometer).
 max_freq_z = 500         # Maximum signal frequency, Z axis (accelerometer).
 
