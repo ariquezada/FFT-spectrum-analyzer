@@ -1,5 +1,9 @@
 #!/usr/bin/env python3    ¡¡¡ OK !!!
 # Program fft_spectrum_gui_3can_py3_01.py
+# - Corrected g_scale.
+# - g_scale = (Vref / ADC resolution) * (300 mv/g)
+# - Error noted and corrected by Steve Ferry.
+# 08/02/2018
 # - Added a timeout control to a while loop.
 # 12/01/2017
 # Program fft_spectrum_gui_3can.py modified:
@@ -48,7 +52,9 @@ import time
 datos_a_leer = 16384     # Amount of samples to read.
 #datos_a_leer = 128
 sample_rate = 5000       # Sampling frequency (SPS).
-g_scale = 3.0/512        # +- 3g. 10 bit ADC.
+#g_scale = 3.0/512        # +- 3g. 10 bit ADC. Wrong value.
+g_scale = (3.3 / 1024) * (1000/300)  #Right value. Thanks Steve.
+#g_scale = (Vref / ADC resolution) * 1/(300 mv/g)
 max_freq = 1500          # Maximum signal frequency, X and Y axis (accelerometer).
 max_freq_z = 500         # Maximum signal frequency, Z axis (accelerometer).
 
@@ -413,7 +419,6 @@ class Application:
             self.sel_puerto.current(0)
 
 
-
     def plot(self, tab1, tab2, canal_1, canal_2, canal_3, win_var=1):
         num_datos = len(canal_1)
         X = range(0, num_datos, 1)
@@ -595,7 +600,7 @@ class Application:
         dlg = filedialog.SaveAs(root, filetypes = ftypes)
         fl = dlg.show()
         if fl != '':
-            global g_canal_1, g_canal_2, g_canal_2
+            global g_canal_1, g_canal_2, g_canal_3
             if (len(g_canal_1) > 0):
                 grabar(g_canal_1, g_canal_2, g_canal_3, fl)
                 self.f_saved = True               #Sampled data saved
