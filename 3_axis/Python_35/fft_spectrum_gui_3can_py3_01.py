@@ -202,20 +202,20 @@ class Application:
         fig1 = Figure(figsize=(10,9))
         fig1.suptitle('Sampled signal - Acceleration')
         ax_11 = fig1.add_subplot(3,1,1)
-        ax_11.hold(False)
+        #ax_11.hold(False)
         ax_11.set_title("Channel X")
         ax_11.set_ylabel('g')
         ax_11.grid()                       #Shows grid.
 
         ax_12 = fig1.add_subplot(3,1,2)
-        ax_12.hold(False)
+        #ax_12.hold(False)
         ax_12.set_title("Channel Y")
         #ax_12.set_xlabel('ms')
         ax_12.set_ylabel('g')
         ax_12.grid()                       #Shows grid.
 
         ax_12 = fig1.add_subplot(3,1,3)
-        ax_12.hold(False)
+        #ax_12.hold(False)
         ax_12.set_title("Channel Z")
         ax_12.set_xlabel('ms')
         ax_12.set_ylabel('g')
@@ -226,14 +226,14 @@ class Application:
         fig2.suptitle('FFT spectrum')
 
         ax_21 = fig2.add_subplot(3,1,1)
-        ax_21.hold(False)
+        #ax_21.hold(False)
         ax_21.set_title("Channel X")
         ax_21.set_ylabel('g')
         ax_21.set_xlim(xmax=max_freq)
         ax_21.grid()            
 
         ax_22 = fig2.add_subplot(3,1,2)
-        ax_22.hold(False)
+        #ax_22.hold(False)
         ax_22.set_title("Channel Y")
         #ax_22.set_xlabel('Hz')
         ax_22.set_xlim(xmax=max_freq)
@@ -241,7 +241,7 @@ class Application:
         ax_22.grid()
 
         ax_23 = fig2.add_subplot(3,1,3)
-        ax_23.hold(False)
+        #ax_23.hold(False)
         ax_23.set_title("Channel Z")
         ax_23.set_xlabel('Hz')
         #ax_23.set_xlim(xmax=max_freq)
